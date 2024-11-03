@@ -623,12 +623,10 @@ const sketchExpand = new Expand({
 //           sketchViewModel.cancel();
 //           sketchLayer.removeAll();
 //           bufferLayer.removeAll();
-//           clearHighlighting();
-//           clearCharts();
-//           resultDiv.style.display = "none";
+//           clearHighlighting(); 
 //         }
 
-//         // set the geometry query on the visible SceneLayerView
+//         // set the geometry query on the visible 
 //         const debouncedRunQuery = promiseUtils.debounce(() => {
 //           if (!sketchGeometry) {
 //             return;
@@ -636,7 +634,6 @@ const sketchExpand = new Expand({
 
 //           resultDiv.style.display = "block";
 //           updateBufferGraphic(bufferSize);
-//           return promiseUtils.eachAlways([queryStatistics(), updateSceneLayer()]);
 //         });
 
 //         function runQuery() {
@@ -658,15 +655,7 @@ const sketchExpand = new Expand({
 //           }
 //         }
 
-//         function highlightBuildings(objectIds) {
-//           // Remove any previous highlighting
-//           clearHighlighting();
-//           const objectIdField = sceneLayer.objectIdField;
-//           document.getElementById("count").innerHTML = objectIds.length;
-
-//           highlightHandle = sceneLayerView.highlight(objectIds);
-//         }
-
+//         
 //         // update the graphic with buffer
 //         function updateBufferGraphic(buffer) {
 //           // add a polygon graphic for the buffer
@@ -687,14 +676,7 @@ const sketchExpand = new Expand({
 //           }
 //         }
 //  //// Dashbord
-// let pieChartValue = new ChartMediaInfoValue({
-//   colors: [[220, 123, 4, 1], [229, 80, 53, 1],
-//   fields: ["<array of strings indicating fields>"],
-//   normalizeField: null,
-//   tooltipField: "<field name>"
-// });
-
-    // Create the PieChartMediaInfo media type
+ // Create the PieChartMediaInfo media type
 
 const counts = {};
 stations_transport.queryFeatures().then((result) => {

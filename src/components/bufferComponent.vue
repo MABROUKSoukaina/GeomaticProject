@@ -24,11 +24,11 @@
       </div>
       <br />
       <div class="tooltip">
-        <label for="bufferNum">Set a geometry buffer size:</label>
+        <label for="bufferNum">Entrer une valeur de buffer:</label>
         <div id="bufferNum"></div>
       </div>
       <br />
-      <button class="esri-button" id="clearGeometry" type="button">Clear</button>
+      <button class="esri-button" id="clearGeometry" type="button">supprimer</button>
     </div>
 
 </template>
