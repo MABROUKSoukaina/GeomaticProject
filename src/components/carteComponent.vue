@@ -1,8 +1,6 @@
 <template>
   <div>
     <div ref="controlDiv" id="viewDiv">
-      
- 
     </div>
   </div>
 </template>
@@ -30,17 +28,24 @@ import Query from "@arcgis/core/rest/support/Query.js";
 import * as geometryEngine from "@arcgis/core/geometry/geometryEngine.js";
 import Sketch from "@arcgis/core/widgets/Sketch.js";
 import GraphicsLayer from "@arcgis/core/layers/GraphicsLayer.js";
-
-
-
+import BufferComponent from './bufferComponent.vue';
+import SketchViewModel from "@arcgis/core/widgets/Sketch/SketchViewModel.js";
+import Slider from "@arcgis/core/widgets/Slider.js";
+import Graphic from "@arcgis/core/Graphic.js";
+import PieChartMediaInfo from "@arcgis/core/popup/content/PieChartMediaInfo.js";
+import ChartMediaInfoValue from "@arcgis/core/popup/content/support/ChartMediaInfoValue.js";
+import MediaContent from "@arcgis/core/popup/content/MediaContent.js";
+import Content from "@arcgis/core/popup/content/Content.js";
+import Color from "@arcgis/core/Color.js";
 
 export default {
   name: 'App',
   components: {
-    controlComponent
+    controlComponent,
+    BufferComponent
   },
   mounted() {
-    esriConfig.apiKey = "AAPTxy8BH1VEsoebNVZXo8HurIcKdRtoWHJb1v9VXl1gywugtAvel-QVM520Vso9ZllIYFWorcnobsBEfCKjCQACw677IpltmueO6ttMoTnjUf7b2DD8qZT9mMv7GmLX7yuFKNZZLzQLRiji059IGkrbVQ2lRD549Db6O9pkhiMPEMqb-AD5A91EKWmdJFziVOHPdYmRttYvEZohWua_3Qb6QBCZzcx03VPXHo_Qdq0YRYS_neWuth4dSllzYGh8eDvDwclJxC7ftK94lUI7IyPeSA..AT1_jfScL6A0";
+    esriConfig.apiKey = "AAPTxy8BH1VEsoebNVZXo8HurCMQWYp9lEfXja_mjt_bIbw6Cdj3sPHyQ1syTJ51QOqV3E0qrSud_LZf9e_C-hoM8ItZoVXSnIy3_7Wdua5RdFcR0kkUy0d4U3hu6M8U9DFUt9uqNG-e-SmL7SwReElWNURFoqGJaheEHOx1eCZ40Dvz4T6fBwEQOK9Ak0C8gIIsUsdaIKcjdM3ajE3HKmgtrWhohQprg1X5qrQWo__XaqeO1G8qvnBi2rpZo4krQ40WeMSo2QhEdN1AFPCvyxOOOA..AT1_AGDmaCWp";
     const routeLayer = new RouteLayer();
     const map = new Map({
       basemap: "arcgis-imagery",
@@ -89,7 +94,7 @@ export default {
 });
 
  const provinces = new FeatureLayer({
-   url: "https://services1.arcgis.com/DgoCfAVgBoJ0d01P/arcgis/rest/services/provinces/FeatureServer/0",
+   url: "https://services.arcgis.com/VyDAHz437VQUuqEU/arcgis/rest/services/provinces/FeatureServer/0",
    outFields: ["Nom"],
    popupTemplate: popupProvince,
    renderer: ProvinceRenderer,
@@ -102,7 +107,7 @@ export default {
         };
 
     const regions = new FeatureLayer({
-       url: "https://services1.arcgis.com/DgoCfAVgBoJ0d01P/arcgis/rest/services/regions/FeatureServer/0",
+       url: "https://services.arcgis.com/VyDAHz437VQUuqEU/arcgis/rest/services/regions/FeatureServer/0",
        outFields: ["NOM_REG"],
        popupTemplate: popupregion,
        renderer: RegionRenderer
@@ -116,7 +121,7 @@ export default {
     };
 
 const stations_transport = new FeatureLayer({
-  url: "https://services1.arcgis.com/DgoCfAVgBoJ0d01P/arcgis/rest/services/transport_stations/FeatureServer",
+  url: "https://services.arcgis.com/VyDAHz437VQUuqEU/arcgis/rest/services/transport_stations/FeatureServer",
   outFields: ["name","fclass", "osm_id"], 
   popupTemplate: popupstation,
   renderer: Stationsrenderer
@@ -164,7 +169,7 @@ var Polygonerenderer = new SimpleRenderer({
 
     //Ajout de la couche des polygones
     const polygones = new FeatureLayer({
-      url: "https://services1.arcgis.com/DgoCfAVgBoJ0d01P/arcgis/rest/services/Polygones/FeatureServer/0",
+      url: "https://services.arcgis.com/VyDAHz437VQUuqEU/arcgis/rest/services/Polygones/FeatureServer/0",
       outFields: ["FID", "Nom", "Descrp"],
       popupTemplate: popupPolygones,
       renderer:Polygonerenderer
@@ -180,7 +185,7 @@ var Polygonerenderer = new SimpleRenderer({
 
   // ajout de la couche des lignes
   const lignes = new FeatureLayer({
-    url: "https://services1.arcgis.com/DgoCfAVgBoJ0d01P/arcgis/rest/services/Lignes/FeatureServer/0",
+    url: "https://services.arcgis.com/VyDAHz437VQUuqEU/arcgis/rest/services/Lignes/FeatureServer/0",
     outFields: ["FID", "Nom", "Descrip"],
     popupTemplate: popupLignes,
     renderer:Lignesrenderer
@@ -195,7 +200,7 @@ var Polygonerenderer = new SimpleRenderer({
 
   // ajout de la couche des points 
   const points = new FeatureLayer({
-    url: "https://services1.arcgis.com/DgoCfAVgBoJ0d01P/arcgis/rest/services/Points/FeatureServer/0",
+    url: "https://services.arcgis.com/VyDAHz437VQUuqEU/arcgis/rest/services/Points/FeatureServer/0",
     outFields: ["FID", "Nom", "Descpt"],
     popupTemplate: popupPoints,
     renderer:Pointrenderer
@@ -251,17 +256,6 @@ view.ui.add(layerListExpand, "bottom-right");
     view.ui.add(scaleBar, {
       position: "bottom-left"
     });
-
-  
-    view.ui.add(
-      new Expand({
-        view: view,
-        content: new Editor({  // widgest de l'édition des couches (points, lignes, polygones)
-          view: view
-        })
-      }),
-      "top-left"
-    );
 
     view.ui.add(
       new Expand({
@@ -416,8 +410,7 @@ console.log(coordonnees);
 // Filtrer la couche affichée sur la carte
 stations_transport.definitionExpression = `latitude IN (${coordonnees.join(', ')}) OR longitude IN (${coordonnees.join(', ')})`;
 
-    // Filtrer la couche affichée sur la carte
-     // Appliquer l'expression de définition
+
 }
 
 // Écoutez l'événement de changement de la région
@@ -516,7 +509,7 @@ selectRegion.addEventListener("change", function(event) {
       Actualiser(); 
     });
 
-    // recherche par une geomertrie dessinee
+    // recherche par une geomertrie dessinée
 
   const graphicsLayer = new GraphicsLayer({ title: "graphicsLayer" });
 
@@ -524,21 +517,260 @@ selectRegion.addEventListener("change", function(event) {
   view: view,
   layer: graphicsLayer
   });
+const sketchExpand = new Expand({
+      view: view,
+      content: sketch,
+      expanded: false,
+      expandIcon:"pencil-mark"
+      
+    });
+    view.ui.add(sketchExpand, "top-left");
+
+  const editor = new Editor({
+  view: view,
+  });
+  const editorExpand = new Expand({
+      view: view,
+      content: editor,
+      expanded: false,
+      
+    });
+
+    view.ui.add(editorExpand, "top-left");
 
   // afficher le sketch sur la carte une fois on presse le bouton avec id sketch
-    document.getElementById("sketch").addEventListener("click", function () {
-    
-     view.ui.add(
-      new Expand({
-        view: view,
-        content: sketch,
-        expanded: true,
-      }),
-      "top-right"
-    );
+  document.getElementById("sketch").addEventListener("click", function () {
+  sketchExpand.expanded= true;
   });
-  }
+
+  document.getElementById("editer").addEventListener("click", function () {
+  editorExpand.expanded=true
+});
+
+ 
+
+// // rechercher par buffer
+// const sketchLayer = new GraphicsLayer();
+//         const bufferLayer = new GraphicsLayer();
+// view.map.addMany([bufferLayer, sketchLayer]);
+// let bufferSize = 0;
+// view.ui.add([queryDiv], "bottom-left");
+
+// let sketchGeometry = null;
+//         const sketchViewModel = new SketchViewModel({
+//           layer: sketchLayer,
+//           defaultUpdateOptions: {
+//             tool: "reshape",
+//             toggleToolOnClick: false
+//           },
+//           view: view,
+//           defaultCreateOptions: { hasZ: false }
+//         });
+
+//         sketchViewModel.on("create", (event) => {
+//           if (event.state === "complete") {
+//             sketchGeometry = event.graphic.geometry;
+//             runQuery();
+//           }
+//         });
+
+//         sketchViewModel.on("update", (event) => {
+//           if (event.state === "complete") {
+//             sketchGeometry = event.graphics[0].geometry;
+//             runQuery();
+//           }
+//         });
+//         // draw geometry buttons - use the selected geometry to sktech
+//         const pointBtn = document.getElementById("point-geometry-button");
+//         const lineBtn = document.getElementById("line-geometry-button");
+//         const polygonBtn = document.getElementById("polygon-geometry-button");
+//         pointBtn.addEventListener("click", geometryButtonsClickHandler);
+//         lineBtn.addEventListener("click", geometryButtonsClickHandler);
+//         polygonBtn.addEventListener("click", geometryButtonsClickHandler);
+//         function geometryButtonsClickHandler(event) {
+//           const geometryType = event.target.value;
+//           clearGeometry();
+//           sketchViewModel.create(geometryType);
+//         }
+
+//         const bufferNumSlider = new Slider({
+//           container: "bufferNum",
+//           min: 0,
+//           max: 500,
+//           steps: 1,
+//           visibleElements: {
+//             labels: true
+//           },
+//           precision: 0,
+//           labelFormatFunction: (value, type) => {
+//             return `${value.toString()}m`;
+//           },
+//           values: [0]
+//         });
+//         // get user entered values for buffer
+//         bufferNumSlider.on(["thumb-change", "thumb-drag"], bufferVariablesChanged);
+//         function bufferVariablesChanged(event) {
+//           bufferSize = event.value;
+//           runQuery();
+//         }
+//         // Clear the geometry and set the default renderer
+//         const clearGeometryBtn = document.getElementById("clearGeometry");
+//         clearGeometryBtn.addEventListener("click", clearGeometry);
+
+//         // Clear the geometry and set the default renderer
+//         function clearGeometry() {
+//           sketchGeometry = null;
+//           sketchViewModel.cancel();
+//           sketchLayer.removeAll();
+//           bufferLayer.removeAll();
+//           clearHighlighting();
+//           clearCharts();
+//           resultDiv.style.display = "none";
+//         }
+
+//         // set the geometry query on the visible SceneLayerView
+//         const debouncedRunQuery = promiseUtils.debounce(() => {
+//           if (!sketchGeometry) {
+//             return;
+//           }
+
+//           resultDiv.style.display = "block";
+//           updateBufferGraphic(bufferSize);
+//           return promiseUtils.eachAlways([queryStatistics(), updateSceneLayer()]);
+//         });
+
+//         function runQuery() {
+//           debouncedRunQuery().catch((error) => {
+//             if (error.name === "AbortError") {
+//               return;
+//             }
+
+//             console.error(error);
+//           });
+//         }
+
+//         // Set the renderer with objectIds
+//         let highlightHandle = null;
+//         function clearHighlighting() {
+//           if (highlightHandle) {
+//             highlightHandle.remove();
+//             highlightHandle = null;
+//           }
+//         }
+
+//         function highlightBuildings(objectIds) {
+//           // Remove any previous highlighting
+//           clearHighlighting();
+//           const objectIdField = sceneLayer.objectIdField;
+//           document.getElementById("count").innerHTML = objectIds.length;
+
+//           highlightHandle = sceneLayerView.highlight(objectIds);
+//         }
+
+//         // update the graphic with buffer
+//         function updateBufferGraphic(buffer) {
+//           // add a polygon graphic for the buffer
+//           if (buffer > 0) {
+//             const bufferGeometry = geometryEngine.geodesicBuffer(sketchGeometry, buffer, "meters");
+//             if (bufferLayer.graphics.length === 0) {
+//               bufferLayer.add(
+//                 new Graphic({
+//                   geometry: bufferGeometry,
+//                   symbol: sketchViewModel.polygonSymbol
+//                 })
+//               );
+//             } else {
+//               bufferLayer.graphics.getItemAt(0).geometry = bufferGeometry;
+//             }
+//           } else {
+//             bufferLayer.removeAll();
+//           }
+//         }
+//  //// Dashbord
+// let pieChartValue = new ChartMediaInfoValue({
+//   colors: [[220, 123, 4, 1], [229, 80, 53, 1],
+//   fields: ["<array of strings indicating fields>"],
+//   normalizeField: null,
+//   tooltipField: "<field name>"
+// });
+
+    // Create the PieChartMediaInfo media type
+
+const counts = {};
+stations_transport.queryFeatures().then((result) => {
+  result.features.forEach((feature) => {
+    const type = feature.attributes["fclass"]; // Remplace par le nom exact de ton attribut
+    counts[type] = (counts[type] || 0) + 1; // Compte le nombre de stations par type
+    
+  });
+
+ 
+  // 2. Préparer les données pour le graphique
+  const types = Object.keys(counts);
+  const values = types.map(type => counts[type]);
+   if (values) {console.log(values)} else console.log("objet vide")
+
+  
+  // Palette de 10 couleurs
+  const colors = [
+    [220, 123, 4, 1],   // Couleur 1
+    [229, 80, 53, 1],   // Couleur 2
+    [54, 162, 235, 1],  // Couleur 3
+    [75, 192, 192, 1],  // Couleur 4
+    [255, 206, 86, 1],  // Couleur 5
+    [153, 102, 255, 1], // Couleur 6
+    [255, 99, 132, 1],  // Couleur 7
+    [255, 159, 64, 1],  // Couleur 8
+    [199, 199, 199, 1],  // Couleur 9
+    [0, 0, 0, 1]        // Couleur 10
+  ]; // Ajuste les couleurs selon le nombre de types
+
+  // 3. Créer le pieChartValue
+  let pieChartValue = new ChartMediaInfoValue({
+    colors :[
+    new Color([220, 123, 4, 1]),   // Couleur 1
+    new Color([229, 80, 53, 1]),   // Couleur 2
+    new Color([54, 162, 235, 1]),  // Couleur 3
+    new Color([75, 192, 192, 1]),  // Couleur 4
+    new Color([255, 206, 86, 1]),  // Couleur 5
+    new Color([153, 102, 255, 1]), // Couleur 6
+    new Color([255, 99, 132, 1]),  // Couleur 7
+    new Color([255, 159, 64, 1]),  // Couleur 8
+    new Color([199, 199, 199, 1]),  // Couleur 9
+    new Color([0, 0, 0, 1])        // Couleur 10
+   ],
+    fields: values.map((value, index) => `${types[index]}: ${value}`), // Formate les champs
+    normalizeField: null,
+  });
+  console.log(pieChartValue.fields)
+
+  // 4. Créer le PieChartMediaInfo
+  let pieChart = new PieChartMediaInfo({
+    title: "<b>Nombre de stations par type</b>",
+    caption: "Distribution par type de station",
+    value: pieChartValue
+  });
+
+  // 5. Créer le MediaContent
+  let mediaElement = new MediaContent({
+    mediaInfos: [pieChart]
+  });
+  const chartExpand = new Expand({
+      view: view,
+    content: mediaElement,
+      expandIcon:"dashboard",
+    expanded: false,
+    });
+  view.ui.add(chartExpand, "top-right");
+
+ document.getElementById("dashbord").addEventListener("click", function () {
+       chartExpand.expanded=true
+});
+});
+
+ }
 };
+
 </script> 
 <style>
 #viewDiv { 
