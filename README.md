@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # AppVue
 
 This template should help get you started developing with Vue 3 in Vite.
@@ -27,3 +28,6 @@ npm run dev
 ```sh
 npm run build
 ```
+=======
+# ProjectGeomatic
+>>>>>>> 16c03c257e18eccf944308cd5558380cd434f139
