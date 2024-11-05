@@ -45,17 +45,17 @@ export default {
     BufferComponent
   },
   mounted() {
-    esriConfig.apiKey = "AAPTxy8BH1VEsoebNVZXo8HurCMQWYp9lEfXja_mjt_bIbw6Cdj3sPHyQ1syTJ51QOqV3E0qrSud_LZf9e_C-hoM8ItZoVXSnIy3_7Wdua5RdFcR0kkUy0d4U3hu6M8U9DFUt9uqNG-e-SmL7SwReElWNURFoqGJaheEHOx1eCZ40Dvz4T6fBwEQOK9Ak0C8gIIsUsdaIKcjdM3ajE3HKmgtrWhohQprg1X5qrQWo__XaqeO1G8qvnBi2rpZo4krQ40WeMSo2QhEdN1AFPCvyxOOOA..AT1_AGDmaCWp";
+    esriConfig.apiKey = "AAPTxy8BH1VEsoebNVZXo8HurCMQWYp9lEfXja_mjt_bIbzSqzGQUgVTSWIF8MBcBnyoEf19M6itsQ-Tot8c5xKBeXVsNeWPMywDy5eapEuV96ycMkPd9le8odF8Hk2JI82G-tlJp_6C8pRpvpiXeerrHAC-Li_qsKHg7k3SLczWfPT-dTpB0MA8J80Q4o7FZmgyq7lS5j6EDjjR0PyWPjNLEyClIjh5F_KbyKvG6RKEn3Tyjx-U-RekcG8W5XvP3WQmgr8bKm-8AxmM6IFb9dRmrA..AT1_AGDmaCWp";
     const routeLayer = new RouteLayer();
     const map = new Map({
-      basemap: "arcgis-imagery",
+      basemap: "topo-vector",
       layers: [routeLayer]
     });
 
     const view = new MapView({
       map: map,
       center: [-7.092620, 31.791702],
-      zoom: 5,
+      zoom: 6,
       container: "viewDiv"
     });
 
@@ -80,9 +80,20 @@ export default {
   })
   }); 
 
+  const SelectedRegionRenderer = new SimpleRenderer({
+  symbol: new SimpleFillSymbol({
+    color: [255, 165, 0, 0.3],  // Augmente la transparence (alpha 0.3 pour un léger effet de sélection)
+  outline: {
+    color: [0, 0, 255],       // Utilise une couleur plus vive pour le contour (ex. : bleu)
+    width: 2                    
+    }
+  })
+  }); 
+
+
     var Stationsrenderer = new SimpleRenderer({
     symbol: new SimpleMarkerSymbol({
-    color: "darkblue",
+    color: "blue",
     size: 4
   })
     });
@@ -105,7 +116,6 @@ export default {
     const popupregion = {
           title: "la région {NOM_REG}",
         };
-
     const regions = new FeatureLayer({
        url: "https://services.arcgis.com/VyDAHz437VQUuqEU/arcgis/rest/services/regions/FeatureServer/0",
        outFields: ["NOM_REG"],
@@ -115,14 +125,15 @@ export default {
     map.add(regions);
 
   const popupstation = {
-  title: "Information sur la station",
+  title: "les nformations sur la station",
   content: "<p><span style='font-weight: bold; color: #222;'>Nom de la station</span> : {name}</p>" +
-           "<p><span style='font-weight: bold; color: #222;'>Type de la station</span> : {fclass}</p>"
+      "<p><span style='font-weight: bold; color: #222;'>Type de la station</span> : {fclass}</p>"
+          
     };
 
 const stations_transport = new FeatureLayer({
-  url: "https://services.arcgis.com/VyDAHz437VQUuqEU/arcgis/rest/services/transport_stations/FeatureServer",
-  outFields: ["name","fclass", "osm_id"], 
+  url: "https://services.arcgis.com/VyDAHz437VQUuqEU/arcgis/rest/services/couche_transport/FeatureServer/0",
+  outFields: ["name","fclass", "osm_id","id"], 
   popupTemplate: popupstation,
   renderer: Stationsrenderer
 });
@@ -208,7 +219,19 @@ var Polygonerenderer = new SimpleRenderer({
   });
     map.add(points)
 
+ var selectedpointSymbol = {
+      type: "simple-marker",
+      color: "darkblue", 
+      size: 10,
+      outline: {
+        color: "lightblue", 
+        width: 3
+      }
+    };
 
+  var selectedPointrenderer = new SimpleRenderer({
+  symbol: selectedpointSymbol
+  })
 
 // Créer l'instance de LayerList
 const layerList = new LayerList({
@@ -370,29 +393,12 @@ view.ui.add(layerListExpand, "bottom-right");
           addedType.add(station);
         }
       }
-      let option_vide = document.createElement("option");
-      option_vide.value = "";
-      option_vide.textContent = "vide";
-      selectType.appendChild(option_vide);
     })
 
-    // filtrer la couche station selon le type
-    selectType.addEventListener('change', function (event) {
-      const selectedtype = event.target.value;
-      
-        if (selectedtype) {
-          const filterValue = `fclass='${selectedtype}'`;
-          stations_transport.definitionExpression = filterValue
-          zoomToLayer(stations_transport)
-        }
-        else {
-          stations_transport.definitionExpression = null
-        
-        }
-      });
+   
     
     // Fonction pour appliquer le filtre sur la couche des stations
-    async function filterStationsInRegion(regionGeometry) {
+ async function filterStationsInRegion(regionGeometry) {
     // Créer une expression de filtre basée sur la géométrie
     var query = new Query();
     query.geometry = regionGeometry;
@@ -402,41 +408,41 @@ view.ui.add(layerListExpand, "bottom-right");
 
     const result = await stations_transport.queryFeatures(query);
     // Récupérer les coordonnées sous forme de chaînes
-const coordonnees = result.features.map(feature => `${feature.attributes.latitude}, ${feature.attributes.longitude}`);
+ const coordonnees = result.features.map(feature => `${feature.attributes.id}`);
 
 // Afficher les identifiants de la couche station (on a utilisé les coordonnées car se sont les seuls attributs qui ont une valeur pour tous les stations)
 console.log(coordonnees);
 
 // Filtrer la couche affichée sur la carte
-stations_transport.definitionExpression = `latitude IN (${coordonnees.join(', ')}) OR longitude IN (${coordonnees.join(', ')})`;
-
-
+stations_transport.definitionExpression = `id IN (${coordonnees.join(', ')})`;
+stations_transport.renderer=selectedPointrenderer 
 }
 
 // Écoutez l'événement de changement de la région
 selectRegion.addEventListener("change", function(event) {
-    var selectedRegion = event.target.value;
+var selectedRegion = event.target.value;
+    
   if (selectedRegion) {
 
           const filterValue = `NOM_REG='${selectedRegion}'`;
           regions.definitionExpression = filterValue
           zoomToLayer(regions)
-        
+          regions.renderer = SelectedRegionRenderer
+          
         // Récupérer la géométrie de la région sélectionnée
-        getRegionGeometry(selectedRegion)
-            .then(function(regionGeometry) {
-                return filterStationsInRegion(regionGeometry); // Filtrer les stations à l'intérieur de la région
+          getRegionGeometry(selectedRegion)
+            .then(function (regionGeometry) {
+             
+              console.log(filterStationsInRegion(regionGeometry))
+              return filterStationsInRegion(regionGeometry);
+              // Filtrer les stations à l'intérieur de la région
             })
+           
             .catch(function(err) {
                 console.error("Erreur lors de la récupération des données : ", err);
             });
-    } else {
-        // Si aucune région n'est sélectionnée, réinitialiser le filtre
-    stations_transport.definitionExpression = ""; // Afficher toutes les stations
-    regions.definitionExpression = "";
-    }
+    } 
 });
-
 
     // récuppérer la géometrie de la région séléctionnée
     async function getRegionGeometry(regionNom) {
@@ -474,7 +480,6 @@ selectRegion.addEventListener("change", function(event) {
     });
 
     }
-
     //Selectionner les provinces qui appartiennent à une region
     
     selectRegion.addEventListener("change", function(event) {
@@ -482,6 +487,7 @@ selectRegion.addEventListener("change", function(event) {
     console.log(selectedRegion)
     if (selectedRegion) {
       // Récupère la géométrie de la région sélectionnée et les provinces associées
+      
       getRegionGeometry(selectedRegion)
         .then(function(regionGeometry) {
           return getProvinces(regionGeometry);
@@ -489,7 +495,6 @@ selectRegion.addEventListener("change", function(event) {
         .catch(function(err) {
           console.error("Erreur lors de la récupération des données : ", err);
         });
-        zoomToLayer(stations_transport)
     }
     });
 
@@ -510,7 +515,6 @@ selectRegion.addEventListener("change", function(event) {
     });
 
     // recherche par une geomertrie dessinée
-
   const graphicsLayer = new GraphicsLayer({ title: "graphicsLayer" });
 
   const sketch = new Sketch({
