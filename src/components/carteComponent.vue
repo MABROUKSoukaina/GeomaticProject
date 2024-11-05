@@ -395,108 +395,205 @@ view.ui.add(layerListExpand, "bottom-right");
       }
     })
 
-   
-    
-    // Fonction pour appliquer le filtre sur la couche des stations
- async function filterStationsInRegion(regionGeometry) {
-    // Créer une expression de filtre basée sur la géométrie
-    var query = new Query();
-    query.geometry = regionGeometry;
-    query.spatialRelationship = "intersects";     //    juste une solution temporaire car Contains, similaire à within  récupère seulement les province avec appartenance total y compris les frontiéres, ce qui générer des problèmes d'affichage
-    query.returnGeometry = false; // Nous n'avons pas besoin de la géométrie ici pour filtrer
-    query.outFields = ["*"]; // Obtenir tous les champs ou spécifiez ceux qui sont nécessaires
+  
 
-    const result = await stations_transport.queryFeatures(query);
-    // Récupérer les coordonnées sous forme de chaînes
- const coordonnees = result.features.map(feature => `${feature.attributes.id}`);
 
-// Afficher les identifiants de la couche station (on a utilisé les coordonnées car se sont les seuls attributs qui ont une valeur pour tous les stations)
-console.log(coordonnees);
+ // Fonction principale pour gérer le filtrage par région et province
+async function handleRegionChange(selectedRegion) {
+    try {
+        if (!selectedRegion) return;
 
-// Filtrer la couche affichée sur la carte
-stations_transport.definitionExpression = `id IN (${coordonnees.join(', ')})`;
-stations_transport.renderer=selectedPointrenderer 
+        // 1. Définir le filtre pour la région et mettre à jour le rendu
+        const filterValue = `NOM_REG='${selectedRegion}'`;
+        regions.definitionExpression = filterValue;
+        regions.renderer = SelectedRegionRenderer;
+        await zoomToLayer(regions);
+
+        // 2. Récupérer la géométrie de la région sélectionnée
+        const regionGeometry = await getRegionGeometry(selectedRegion);
+        
+        // 3. Filtrer les stations à l'intérieur de la région
+        await filterStationsInRegion(regionGeometry);
+
+        // 4. Récupérer les provinces associées à la région
+        await getProvinces(regionGeometry);
+
+    } catch (err) {
+        console.error("Erreur lors du traitement de la région sélectionnée : ", err);
+    }
+    }
+
+async function handleProvinceChange(selectedProvince) {
+    try {
+        if (!selectedProvince) return;
+
+        // 1. Définir le filtre pour la province et mettre à jour le rendu
+        const filterValue = `Nom='${selectedProvince}'`;
+        provinces.definitionExpression = filterValue;
+        provinces.renderer = SelectedRegionRenderer;
+        await zoomToLayer(regions);
+
+        // 2. Récupérer la géométrie de la province sélectionnée
+        const provinceGeometry = await getProvinceGeometry(selectedProvince);
+        
+        // 3. Filtrer les stations à l'intérieur de la province
+        await filterStationsInProvince(provinceGeometry);
+
+        
+       
+
+    } catch (err) {
+        console.error("Erreur lors du traitement de la région sélectionnée : ", err);
+    }
 }
-
-// Écoutez l'événement de changement de la région
-selectRegion.addEventListener("change", function(event) {
-var selectedRegion = event.target.value;
-    
-  if (selectedRegion) {
-
-          const filterValue = `NOM_REG='${selectedRegion}'`;
-          regions.definitionExpression = filterValue
-          zoomToLayer(regions)
-          regions.renderer = SelectedRegionRenderer
-          
-        // Récupérer la géométrie de la région sélectionnée
-          getRegionGeometry(selectedRegion)
-            .then(function (regionGeometry) {
-             
-              console.log(filterStationsInRegion(regionGeometry))
-              return filterStationsInRegion(regionGeometry);
-              // Filtrer les stations à l'intérieur de la région
-            })
-           
-            .catch(function(err) {
-                console.error("Erreur lors de la récupération des données : ", err);
-            });
-    } 
-});
-
-    // récuppérer la géometrie de la région séléctionnée
-    async function getRegionGeometry(regionNom) {
-    var query = new Query();
+// Fonction pour récupérer la géométrie de la région sélectionnée
+async function getRegionGeometry(regionNom) {
+    const query = new Query();
     query.where = `NOM_REG = '${regionNom}'`; 
     query.returnGeometry = true;
 
     const result = await regions.queryFeatures(query);
-      if (result.features.length > 0) {
-      console.log("fonction get region works")
-      return result.features[0].geometry; // Récupère la géométrie de la première région trouvée
-      
+    if (result.features.length > 0) {
+        console.log("La géométrie de la région a été récupérée avec succès.");
+        return result.features[0].geometry;
     } else {
-      throw new Error("Aucune région trouvée avec ce nom.");
+        throw new Error("Aucune région trouvée avec ce nom.");
     }
-  }
-   // Fonction pour récupérer les provinces
- async function getProvinces(regionGeometry) {
-    var query = new Query();
+    }
+async function getProvinceGeometry(provinceNom) {
+    const query = new Query();
+    query.where = `Nom = '${provinceNom}'`; 
+    query.returnGeometry = true;
+    const result = await provinces.queryFeatures(query);
+    if (result.features.length > 0) {
+        console.log("La géométrie de la province a été récupérée avec succès.");
+        return result.features[0].geometry;
+    } else {
+        throw new Error("Aucune province trouvée avec ce nom.");
+    }
+}
+
+// Fonction pour filtrer les stations dans la région
+async function filterStationsInRegion(regionGeometry) {
+    const query = new Query();
     query.geometry = regionGeometry;
-    query.spatialRelationship = "within"; // Relation spatiale
+    query.spatialRelationship = "intersects";  // Utilisez "intersects" pour inclure les stations proches des frontières
     query.returnGeometry = false;
+    query.outFields = ["id"];  // Récupérer uniquement l'ID
+
+    const result = await stations_transport.queryFeatures(query);
+    const stationsIds = result.features.map(feature => feature.attributes.id).join(', ');
+
+    stations_transport.definitionExpression = `id IN (${stationsIds})`;
+    stations_transport.renderer = selectedPointrenderer;
+  console.log("Stations filtrées :", stationsIds);
+   
+    }
+async function filterStationsInProvince(provinceGeometry) {
+    const query = new Query();
+    query.geometry = provinceGeometry;
+    query.spatialRelationship = "intersects";  // Utilisez "intersects" pour inclure les stations proches des frontières
+    query.returnGeometry = false;
+    query.outFields = ["id"];  // Récupérer uniquement l'ID
+
+    const result = await stations_transport.queryFeatures(query);
+    const stationsIds = result.features.map(feature => feature.attributes.id).join(', ');
+
+    stations_transport.definitionExpression = `id IN (${stationsIds})`;
+    stations_transport.renderer = selectedPointrenderer;
+    console.log("Stations filtrées :", stationsIds);
+   
+}
+
+// Fonction pour récupérer les provinces à l'intérieur d'une région
+async function getProvinces(regionGeometry) {
+    const query = new Query();
+    query.geometry = regionGeometry;
+    query.spatialRelationship = "intersects";
+    query.returnGeometry = true; // Nous avons besoin de la géométrie pour calculer l'aire
     query.outFields = ["Nom"]; 
 
-   const result = await provinces.queryFeatures(query);
-    if (result!=null) { console.log("Province recupérés" ,result)} else console.log("aucun province récupéré")
-    selectProvince.innerHTML = ""; // Efface les anciennes options
+    const result = await provinces.queryFeatures(query);
+    selectProvince.innerHTML = ""; // Effacer les anciennes options
 
-   result.features.forEach(function (feature) {
-      console.log(feature.attributes["Nom"])
-      var option = document.createElement("option");
-      option.value = feature.attributes["Nom"]; // Valeur de la province
-      option.text = feature.attributes["Nom"]; // Texte affiché
-      selectProvince.add(option);
-    });
+    if (result.features.length > 0) {
+        console.log("Provinces récupérées avec succès.");
 
-    }
-    //Selectionner les provinces qui appartiennent à une region
-    
-    selectRegion.addEventListener("change", function(event) {
-    var selectedRegion = event.target.value;
-    console.log(selectedRegion)
-    if (selectedRegion) {
-      // Récupère la géométrie de la région sélectionnée et les provinces associées
-      
-      getRegionGeometry(selectedRegion)
-        .then(function(regionGeometry) {
-          return getProvinces(regionGeometry);
-        })
-        .catch(function(err) {
-          console.error("Erreur lors de la récupération des données : ", err);
+        result.features.forEach(feature => {
+            const provinceGeometry = feature.geometry;
+
+            // Calculer l'intersection entre la région et la province
+            const intersection = geometryEngine.intersect(regionGeometry, provinceGeometry);
+            
+            if (intersection) {
+                const intersectionArea = geometryEngine.geodesicArea(intersection, "square-kilometers");
+                const provinceArea = geometryEngine.geodesicArea(provinceGeometry, "square-kilometers");
+
+                // Vérifier si l'aire d'intersection est significative
+                if (intersectionArea / provinceArea > 0.) { // par exemple, plus de 50% de la province est dans la région
+                    const option = document.createElement("option");
+                    option.value = feature.attributes.Nom;
+                    option.text = feature.attributes.Nom;
+                    selectProvince.add(option);
+                }
+            }
         });
+    } else {
+        console.log("Aucune province trouvée pour cette région.");
     }
-    });
+}
+
+
+// Événement de changement sur le sélecteur de région
+selectRegion.addEventListener("change", (event) => {
+    const selectedRegion = event.target.value;
+    handleRegionChange(selectedRegion);
+});
+selectProvince.addEventListener("change", (event) => {
+    const selectedProvince = event.target.value;
+    handleProvinceChange(selectedProvince);
+});
+
+ let regionFilterExpression = ""; // Filtre basé sur la région géographique
+  let typeFilterExpression = "";   // Filtre basé sur le type sélectionné
+
+// selectType.addEventListener('change', function(event) {
+//   const selectedType = event.target.value;
+
+//   if (selectedType) {
+//     // Définir le filtre de type en fonction de la sélection
+//     typeFilterExpression = `fclass='${selectedType}'`;
+//   } else {
+//     // Effacer le filtre de type s'il n'y a pas de sélection
+//     typeFilterExpression = "";
+//   }
+
+//   // Appliquer la définition combinée des filtres
+  
+// });
+
+//   function applyCombinedFilter() {
+//   // Construire la définition combinée
+//   let combinedExpression = "";
+
+//   if (regionFilterExpression && typeFilterExpression) {
+//     combinedExpression = `${regionFilterExpression} AND ${typeFilterExpression}`;
+//   } else if (regionFilterExpression) {
+//     combinedExpression = regionFilterExpression;
+//   } else if (typeFilterExpression) {
+//     combinedExpression = typeFilterExpression;
+//   }
+
+//   // Appliquer l'expression de filtre combinée à la couche
+//   stations_transport.definitionExpression = combinedExpression;
+
+//   // Si vous avez un rendu spécifique pour les points filtrés
+//   stations_transport.renderer = selectedPointrenderer;
+
+//   // Optionnel : zoom sur les points filtrés
+//   zoomToLayer(stations_transport);
+// }
+ 
 
     // supprimer tous les filtres
   const InitDiv = document.getElementById("initialiser");
@@ -513,6 +610,7 @@ var selectedRegion = event.target.value;
     InitDiv.addEventListener('click', function () {
       Actualiser(); 
     });
+
 
     // recherche par une geomertrie dessinée
   const graphicsLayer = new GraphicsLayer({ title: "graphicsLayer" });
@@ -549,7 +647,7 @@ const sketchExpand = new Expand({
 
   document.getElementById("editer").addEventListener("click", function () {
   editorExpand.expanded=true
-});
+  });
 
  
 
