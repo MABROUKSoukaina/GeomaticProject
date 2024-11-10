@@ -1,11 +1,14 @@
 <template>
   <div>
-    <div ref="controlDiv" id="viewDiv">
+    <div id="viewDiv">
     </div>
   </div>
 </template>
 <script>
 import controlComponent from './controlComponent.vue';
+import BufferComponent from './bufferComponent.vue';
+import dashComponent from './dashComponent.vue';
+import { Chart, DoughnutController, ArcElement, Tooltip, Legend, Title } from 'chart.js';
 import esriConfig from "@arcgis/core/config.js";
 import Map from '@arcgis/core/Map.js';
 import MapView from '@arcgis/core/views/MapView.js';
@@ -15,41 +18,36 @@ import Expand from "@arcgis/core/widgets/Expand.js";
 import Editor from "@arcgis/core/widgets/Editor.js";
 import Directions from "@arcgis/core/widgets/Directions.js";
 import ScaleBar from "@arcgis/core/widgets/ScaleBar.js";
-import Locate from "@arcgis/core/widgets/Locate.js";
 import RouteLayer from "@arcgis/core/layers/RouteLayer.js";
 import PopupTemplate from '@arcgis/core/PopupTemplate.js';
 import SimpleMarkerSymbol from "@arcgis/core/symbols/SimpleMarkerSymbol.js";
 import SimpleRenderer from "@arcgis/core/renderers/SimpleRenderer";
 import SimpleLineSymbol from "@arcgis/core/symbols/SimpleLineSymbol";
-import SimpleFillSymbol from "@arcgis/core/symbols/SimpleFillSymbol"; // Pour les polygones
+import SimpleFillSymbol from "@arcgis/core/symbols/SimpleFillSymbol"; 
 import BasemapGallery from "@arcgis/core/widgets/BasemapGallery.js";
 import LayerList from "@arcgis/core/widgets/LayerList.js";
 import Query from "@arcgis/core/rest/support/Query.js";
 import * as geometryEngine from "@arcgis/core/geometry/geometryEngine.js";
 import Sketch from "@arcgis/core/widgets/Sketch.js";
 import GraphicsLayer from "@arcgis/core/layers/GraphicsLayer.js";
-import BufferComponent from './bufferComponent.vue';
 import SketchViewModel from "@arcgis/core/widgets/Sketch/SketchViewModel.js";
 import Slider from "@arcgis/core/widgets/Slider.js";
 import Graphic from "@arcgis/core/Graphic.js";
-import PieChartMediaInfo from "@arcgis/core/popup/content/PieChartMediaInfo.js";
-import ChartMediaInfoValue from "@arcgis/core/popup/content/support/ChartMediaInfoValue.js";
-import MediaContent from "@arcgis/core/popup/content/MediaContent.js";
-import Content from "@arcgis/core/popup/content/Content.js";
-import Color from "@arcgis/core/Color.js";
 
 export default {
   name: 'App',
   components: {
     controlComponent,
-    BufferComponent
+    BufferComponent,
+    dashComponent,
   },
   mounted() {
-    esriConfig.apiKey = "AAPTxy8BH1VEsoebNVZXo8HurCMQWYp9lEfXja_mjt_bIbzSqzGQUgVTSWIF8MBcBnyoEf19M6itsQ-Tot8c5xKBeXVsNeWPMywDy5eapEuV96ycMkPd9le8odF8Hk2JI82G-tlJp_6C8pRpvpiXeerrHAC-Li_qsKHg7k3SLczWfPT-dTpB0MA8J80Q4o7FZmgyq7lS5j6EDjjR0PyWPjNLEyClIjh5F_KbyKvG6RKEn3Tyjx-U-RekcG8W5XvP3WQmgr8bKm-8AxmM6IFb9dRmrA..AT1_AGDmaCWp";
-    const routeLayer = new RouteLayer();
+    esriConfig.apiKey = "AAPTxy8BH1VEsoebNVZXo8HurGH-dZoa20n9-eNCQSaz_b8Vf2ywp63QOLvqTbIg3nayMlmtcs-MivrHz2OoWOxL5zmYk_jG1Ka3c_d1_6Gd2etxIhjaEPMFL3kicNL52B6G2U3FxpyitUI6Bzm2hYQE3b2aTvEN2VI1wZ3BaAkFEr3hlSJuf0zcHCgOoFjTdqB3MgdugKfmRRJYD0QPIIPGsm48ddHYouQi9GkzzM55_V1qHhMpJG_849ULhFPMh7cLSgaQrIo1U-uYdrB0TGXHNQ..AT1_nZs5gMpl";
+    const itinéraires = new RouteLayer();
+    const graphicsLayer = new GraphicsLayer({ title: "graphicsLayer" });
     const map = new Map({
-      basemap: "topo-vector",
-      layers: [routeLayer]
+      layers: [itinéraires, graphicsLayer],
+      basemap:"topo-vector"
     });
 
     const view = new MapView({
@@ -60,208 +58,222 @@ export default {
     });
 
     //Renderer pour la symbologie
-  const ProvinceRenderer = new SimpleRenderer({
-  symbol: new SimpleFillSymbol({
-    color: [255, 165, 0, 0],  
-    outline: {
-      color: "black",    
-      width: 1                 
-    }
-  })
-  }); 
+    const ProvinceRenderer = new SimpleRenderer({
+      symbol: new SimpleFillSymbol({
+        color: [255, 165, 0, 0],
+        outline: {
+          color: "black",
+          width: 1
+        }
+      })
+    });
 
-  const RegionRenderer = new SimpleRenderer({
-  symbol: new SimpleFillSymbol({
-    color: [255, 165, 0, 0],  
-    outline: {
-      color: [210, 105, 30],    
-      width: 1                 
-    }
-  })
-  }); 
+    const RegionRenderer = new SimpleRenderer({
+      symbol: new SimpleFillSymbol({
+        color: [255, 165, 0, 0],
+        outline: {
+          color: [210, 105, 30],
+          width: 1
+        }
+      })
+    });
 
-  const SelectedRegionRenderer = new SimpleRenderer({
-  symbol: new SimpleFillSymbol({
-    color: [255, 165, 0, 0.3],  // Augmente la transparence (alpha 0.3 pour un léger effet de sélection)
-  outline: {
-    color: [0, 0, 255],       // Utilise une couleur plus vive pour le contour (ex. : bleu)
-    width: 2                    
-    }
-  })
-  }); 
+    const SelectedRegionRenderer = new SimpleRenderer({
+      symbol: new SimpleFillSymbol({
+        color: [255, 165, 0, 0.3],  // Augmente la transparence (alpha 0.3 pour un léger effet de sélection)
+        outline: {
+          color: [0, 0, 255],       // Utilise une couleur plus vive pour le contour (ex. : bleu)
+          width: 2
+        }
+      })
+    });
 
 
     var Stationsrenderer = new SimpleRenderer({
-    symbol: new SimpleMarkerSymbol({
-    color: "blue",
-    size: 4
-  })
+      symbol: new SimpleMarkerSymbol({
+        color: "blue",
+        size: 4
+      })
     });
 
     var popupProvince = new PopupTemplate({
       title: "Province {Nom}",
-   
-  
-});
 
- const provinces = new FeatureLayer({
-   url: "https://services.arcgis.com/VyDAHz437VQUuqEU/arcgis/rest/services/provinces/FeatureServer/0",
-   outFields: ["Nom"],
-   popupTemplate: popupProvince,
-   renderer: ProvinceRenderer,
-         });
+
+    });
+
+    const provinces = new FeatureLayer({
+      url: "https://services3.arcgis.com/09qwKWHRBuUoUCW6/arcgis/rest/services/provinces/FeatureServer/0",
+      outFields: ["Nom"],
+      popupTemplate: popupProvince,
+      renderer: ProvinceRenderer,
+    });
 
     map.add(provinces);
 
     const popupregion = {
-          title: "la région {NOM_REG}",
-        };
+      title: "la région {NOM_REG}",
+    };
     const regions = new FeatureLayer({
-       url: "https://services.arcgis.com/VyDAHz437VQUuqEU/arcgis/rest/services/regions/FeatureServer/0",
-       outFields: ["NOM_REG"],
-       popupTemplate: popupregion,
-       renderer: RegionRenderer
+      url: "https://services3.arcgis.com/09qwKWHRBuUoUCW6/arcgis/rest/services/regions/FeatureServer/0",
+      outFields: ["NOM_REG"],
+      popupTemplate: popupregion,
+      renderer: RegionRenderer
     });
     map.add(regions);
 
-  const popupstation = {
-  title: "les nformations sur la station",
-  content: "<p><span style='font-weight: bold; color: #222;'>Nom de la station</span> : {name}</p>" +
-      "<p><span style='font-weight: bold; color: #222;'>Type de la station</span> : {fclass}</p>"
-          
+    const popupstation = {
+      title: "les nformations sur la station",
+      content: "<p><span style='font-weight: bold; color: #222;'>Nom de la station</span> : {name}</p>" +
+        "<p><span style='font-weight: bold; color: #222;'>Type de la station</span> : {fclass}</p>"
+
     };
 
-const stations_transport = new FeatureLayer({
-  url: "https://services.arcgis.com/VyDAHz437VQUuqEU/arcgis/rest/services/couche_transport/FeatureServer/0",
-  outFields: ["name","fclass", "osm_id","id"], 
-  popupTemplate: popupstation,
-  renderer: Stationsrenderer
-});
-map.add(stations_transport);
-    
-var Polygonerenderer = new SimpleRenderer({
-  symbol: new SimpleFillSymbol({
-  color: "purple", // Couleur bleue avec transparence de 30%
-  })
-  });
+    const stations_transport = new FeatureLayer({
+      url: "https://services3.arcgis.com/09qwKWHRBuUoUCW6/arcgis/rest/services/couche_transport/FeatureServer/0",
+      outFields: ["name", "fclass", "osm_id", "id"],
+      popupTemplate: popupstation,
+      renderer: Stationsrenderer
+    });
+    map.add(stations_transport);
 
-  var Lignesrenderer = new SimpleRenderer({
-  symbol: new SimpleLineSymbol({
-    color: "red", // Couleur bleue avec transparence de 30%
-    width: 2
-  })
-  });
-   var pointSymbol = {
+    var Polygonerenderer = new SimpleRenderer({
+      symbol: new SimpleFillSymbol({
+        color: "purple", // Couleur bleue avec transparence de 30%
+      })
+    });
+
+    var Lignesrenderer = new SimpleRenderer({
+      symbol: new SimpleLineSymbol({
+        color: "red", // Couleur bleue avec transparence de 30%
+        width: 2
+      })
+    });
+    var pointSymbol = {
       type: "simple-marker",
-      color: "darkgreen", 
+      color: "darkgreen",
       size: 10,
       outline: {
-        color: "lightgreen", 
+        color: "lightgreen",
         width: 3
       }
     };
 
-  
-  var Pointrenderer = new SimpleRenderer({
-  symbol: pointSymbol
-  })
-  
 
-   var popupPolygones = new PopupTemplate({
-   title: "Informations sur le polygone crée",
-  content: `
+    var Pointrenderer = new SimpleRenderer({
+      symbol: pointSymbol
+    })
+
+
+    var popupPolygones = new PopupTemplate({
+      title: "Informations sur le polygone crée",
+      content: `
     <div style='font-size: 1em; color: #555;'>
       <p><span style='font-weight: bold; color: #222;'>Code</span> : {FID}</p>
       <p><span style='font-weight: bold; color: #222;'>Nom</span> : {Nom}</p>
       <p><span style='font-weight: bold; color: #222;'>Description</span> : {Descrp}</p>
     </div>
   `
-});
+    });
 
     //Ajout de la couche des polygones
     const polygones = new FeatureLayer({
-      url: "https://services.arcgis.com/VyDAHz437VQUuqEU/arcgis/rest/services/Polygones/FeatureServer/0",
+      url: "https://services3.arcgis.com/09qwKWHRBuUoUCW6/arcgis/rest/services/Polygones/FeatureServer/0",
       outFields: ["FID", "Nom", "Descrp"],
       popupTemplate: popupPolygones,
-      renderer:Polygonerenderer
-  });
-    map.add(polygones);
-  
-  var popupLignes = new PopupTemplate({
-      title: "Les informations du client",
+      renderer: Polygonerenderer
+    });
+   map.add(polygones);
+
+    var popupLignes = new PopupTemplate({
+      title: "Informations sur la ligne crée",
       content: "<p><span style='font-weight: bold;'>Code</span> : {FID} </p>" +
-      "<p> <span style='font-weight: bold;'>Nom</span> : {Nom} </p>" +
-      "<p><span style='font-weight: bold;'>Déscription</span> : {Descrip} </p>"
-  });
+        "<p> <span style='font-weight: bold;'>Nom</span> : {Nom} </p>" +
+        "<p><span style='font-weight: bold;'>Déscription</span> : {Descrip} </p>"
+    });
 
-  // ajout de la couche des lignes
-  const lignes = new FeatureLayer({
-    url: "https://services.arcgis.com/VyDAHz437VQUuqEU/arcgis/rest/services/Lignes/FeatureServer/0",
-    outFields: ["FID", "Nom", "Descrip"],
-    popupTemplate: popupLignes,
-    renderer:Lignesrenderer
-  });
+    // ajout de la couche des lignes
+    const lignes = new FeatureLayer({
+      url: "https://services3.arcgis.com/09qwKWHRBuUoUCW6/arcgis/rest/services/Lignes/FeatureServer/0",
+      outFields: ["FID", "Nom", "Descrip"],
+      popupTemplate: popupLignes,
+      renderer: Lignesrenderer
+    });
     map.add(lignes);
-    
+
     var popupPoints = new PopupTemplate({// Popup affichant les information sur les points crées
-      title: "Information sur le point crée",
+      title: "Informations sur le point crée",
       content: "<p><span style='font-weight: bold;'>Code</span> : {FID} </p>" + "<p> <span style='font-weight: bold;'>Nom</span> : {Nom} </p>" + "<p><span style='font-weight: bold;'>Description</span> : {Descpt} </p>",
-      
-  });
 
-  // ajout de la couche des points 
-  const points = new FeatureLayer({
-    url: "https://services.arcgis.com/VyDAHz437VQUuqEU/arcgis/rest/services/Points/FeatureServer/0",
-    outFields: ["FID", "Nom", "Descpt"],
-    popupTemplate: popupPoints,
-    renderer:Pointrenderer
+    });
 
-  });
+    // ajout de la couche des points 
+    const points = new FeatureLayer({
+      url: "https://services3.arcgis.com/09qwKWHRBuUoUCW6/arcgis/rest/services/Points/FeatureServer/0",
+      outFields: ["FID", "Nom", "Descpt"],
+      popupTemplate: popupPoints,
+      renderer: Pointrenderer
+
+    });
     map.add(points)
 
- var selectedpointSymbol = {
+    var selectedpointSymbol = {
       type: "simple-marker",
-      color: "darkblue", 
+      color: "darkblue",
       size: 10,
       outline: {
-        color: "lightblue", 
+        color: "lightblue",
+        width: 3
+      }
+    };
+    var selectedtypeSymbol = {
+      type: "simple-marker",
+      color: "red",
+      size: 10,
+      outline: {
+        color: "pink",
         width: 3
       }
     };
 
-  var selectedPointrenderer = new SimpleRenderer({
-  symbol: selectedpointSymbol
-  })
 
-// Créer l'instance de LayerList
-const layerList = new LayerList({
-  view: view,
-  listItemCreatedFunction: (event) => {
-    const item = event.item;
-    if (item.layer.type !== "group") {
-      // Éviter d'afficher la légende deux fois
-      item.panel = {
-        content: "legend",
-        open: true
-      };
-    }
-  }
-});
+    var selectedPointrenderer = new SimpleRenderer({
+      symbol: selectedpointSymbol
+    })
 
-const coordinatesWidget = document.createElement("div");
+    var selectedTyperenderer = new SimpleRenderer({
+      symbol: selectedtypeSymbol
+    })
+
+    // Créer l'instance de LayerList
+    const layerList = new LayerList({
+      view: view,
+      listItemCreatedFunction: (event) => {
+        const item = event.item;
+        if (item.layer.type !== "group") {
+          // Éviter d'afficher la légende deux fois
+          item.panel = {
+            content: "legend",
+            open: true
+          };
+        }
+      }
+    });
+
+    const coordinatesWidget = document.createElement("div");
     coordinatesWidget.id = "coordinatesWidget";
     // Ajoutez le widget de coordonnées à la vue
     view.ui.add(coordinatesWidget, "bottom-left");
-// Créer l'instance de Expand
-const layerListExpand = new Expand({
-  view: view,
-  content: layerList,
-  expanded: false // Détermine si l'Expand est ouvert par défaut
-});
+    // Créer l'instance de Expand
+    const layerListExpand = new Expand({
+      view: view,
+      content: layerList,
+      expanded: false // Détermine si l'Expand est ouvert par défaut
+    });
 
-view.ui.add(layerListExpand, "bottom-right");
+    view.ui.add(layerListExpand, "bottom-right");
 
-     view.ui.add(
+    view.ui.add(
       new Expand({
         view: view,
         content: new BasemapGallery({
@@ -273,7 +285,7 @@ view.ui.add(layerListExpand, "bottom-right");
       "bottom-right"
     );
 
-    const scaleBar = new ScaleBar({ 
+    const scaleBar = new ScaleBar({
       view: view
     });
     view.ui.add(scaleBar, {
@@ -285,10 +297,10 @@ view.ui.add(layerListExpand, "bottom-right");
         view: view,
         content: new Directions({
           view: view,
-          layer: routeLayer
+          layer: itinéraires
         })
       }),
-      "top-right"
+      "top-left"
     );
 
     view.ui.add(
@@ -298,19 +310,9 @@ view.ui.add(layerListExpand, "bottom-right");
           view: view
         })
       }),
-      "top-right"
+      "top-left"
     );
 
-    // widgest indiquant la localisation approchée
-    const locate = new Locate({
-      view: view,
-      useHeadingEnabled: false,
-      goToOverride: function (view, options) {
-        options.target.scale = 1500;
-        return view.goTo(options.target);
-      }
-    });
-    view.ui.add(locate, "top-right");
 
     // fonction pour zommer sur la couche 
 
@@ -321,7 +323,7 @@ view.ui.add(layerListExpand, "bottom-right");
             console.error(error);
           });
       });
-    } 
+    }
     // recuperer les selecteurs 
     const selectRegion = document.getElementById("region");
     const selectProvince = document.getElementById("province");
@@ -343,7 +345,7 @@ view.ui.add(layerListExpand, "bottom-right");
       returnGeometry: true
     }
 
-  const station_type = {
+    const station_type = {
       where: '1=1',
       outFields: ["fclass"], // Attributes to return
       returnGeometry: true
@@ -359,13 +361,13 @@ view.ui.add(layerListExpand, "bottom-right");
           let option = document.createElement("option");
           option.value = region;
           option.textContent = region;
-          selectRegion.appendChild(option); 
+          selectRegion.appendChild(option);
           addedRegions.add(region);
         }
       }
     })
 
-    // charger le selecteur par les noms des provinces à partir de la couche province
+    // // charger le selecteur par les noms des provinces à partir de la couche province
     provinces.queryFeatures(Province).then((results) => {
       const features = results.features;
 
@@ -375,12 +377,12 @@ view.ui.add(layerListExpand, "bottom-right");
           let option = document.createElement("option");
           option.value = province;
           option.textContent = province;
-          selectProvince.appendChild(option); 
+          selectProvince.appendChild(option);
           addedProvinces.add(province);
         }
       }
     })
-    // charger le selecteur par les types de station à partir de la couche transport_station
+    // // charger le selecteur par les types de station à partir de la couche transport_station
     stations_transport.queryFeatures(station_type).then((results) => {
       const features = results.features;
       for (const feature of features) {
@@ -389,215 +391,254 @@ view.ui.add(layerListExpand, "bottom-right");
           let option = document.createElement("option");
           option.value = station;
           option.textContent = station;
-          selectType.appendChild(option); 
+          selectType.appendChild(option);
           addedType.add(station);
         }
       }
     })
 
-  
-
-
- // Fonction principale pour gérer le filtrage par région et province
-async function handleRegionChange(selectedRegion) {
-    try {
+    // Fonction principale pour gérer le filtrage par région et province
+    async function handleRegionChange(selectedRegion) {
+      try {
         if (!selectedRegion) return;
 
-        // 1. Définir le filtre pour la région et mettre à jour le rendu
+        //  Définir le filtre pour la région et mettre à jour le rendu
         const filterValue = `NOM_REG='${selectedRegion}'`;
         regions.definitionExpression = filterValue;
         regions.renderer = SelectedRegionRenderer;
         await zoomToLayer(regions);
 
-        // 2. Récupérer la géométrie de la région sélectionnée
+        //  Récupérer la géométrie de la région sélectionnée
         const regionGeometry = await getRegionGeometry(selectedRegion);
-        
-        // 3. Filtrer les stations à l'intérieur de la région
-        await filterStationsInRegion(regionGeometry);
 
-        // 4. Récupérer les provinces associées à la région
+        //  Filtrer les stations à l'intérieur de la région
+        FilterStationsInGeometry(regionGeometry);
+
+        // Récupérer les provinces associées à la région
         await getProvinces(regionGeometry);
 
-    } catch (err) {
+      } catch (err) {
         console.error("Erreur lors du traitement de la région sélectionnée : ", err);
-    }
+      }
     }
 
-async function handleProvinceChange(selectedProvince) {
-    try {
+    async function handleProvinceChange(selectedProvince) {
+      try {
         if (!selectedProvince) return;
 
-        // 1. Définir le filtre pour la province et mettre à jour le rendu
+        //  Définir le filtre pour la province et mettre à jour le rendu
         const filterValue = `Nom='${selectedProvince}'`;
         provinces.definitionExpression = filterValue;
         provinces.renderer = SelectedRegionRenderer;
-        await zoomToLayer(regions);
-
-        // 2. Récupérer la géométrie de la province sélectionnée
+        await zoomToLayer(provinces);
+        //  Récupérer la géométrie de la province sélectionnée
         const provinceGeometry = await getProvinceGeometry(selectedProvince);
-        
-        // 3. Filtrer les stations à l'intérieur de la province
-        await filterStationsInProvince(provinceGeometry);
-
-        
-       
-
-    } catch (err) {
+        //  Filtrer les stations à l'intérieur de la province
+        FilterStationsInGeometry(provinceGeometry)
+      } catch (err) {
         console.error("Erreur lors du traitement de la région sélectionnée : ", err);
+      }
     }
-}
-// Fonction pour récupérer la géométrie de la région sélectionnée
-async function getRegionGeometry(regionNom) {
-    const query = new Query();
-    query.where = `NOM_REG = '${regionNom}'`; 
-    query.returnGeometry = true;
+  
 
-    const result = await regions.queryFeatures(query);
-    if (result.features.length > 0) {
+    async function FilterStationsInGeometry(Geometry) {
+  clearSelectionStations();
+  const query = stations_transport.createQuery();
+  query.geometry = Geometry;
+  query.spatialRelationship = "intersects";
+  query.outFields = ["id", "fclass"];
+
+  try {
+    const results = await stations_transport.queryFeatures(query);
+    const filteredStationsCount = results.features.length;
+    console.log("Nombre de stations filtrées:", filteredStationsCount);
+
+    if (filteredStationsCount > 0) {
+      const stationsIds = results.features.map(feature => feature.attributes.id).join(', ');
+      stations_transport.definitionExpression = `id IN (${stationsIds})`;
+      stations_transport.renderer = selectedPointrenderer;
+      document.getElementById("count").textContent = filteredStationsCount;
+      // Mettre à jour la chart uniquement avec les stations filtrées
+      updateChartWithFilteredData(results.features);
+    } else {
+      // Si aucun point n'est trouvé, réinitialise le graphique aux données par défaut
+      stations_transport.definitionExpression = null;
+      initializeChartWithAllStations();
+    }
+  } catch (error) {
+    console.error("Erreur lors de la requête de filtre :", error);
+  }
+}
+    // Fonction pour effacer les surbrillances
+    function clearSelectionStations() {
+      stations_transport.definitionExpression = ''
+      stations_transport.renderer = Stationsrenderer
+
+    }
+
+function updateChartWithFilteredData(features) {
+  // Compter le nombre de stations par type (fclass)
+  const counts = {
+    vide: 0, bus_stop: 0, ferry_terminal: 0, airport: 0,
+    bus_station: 0, taxi: 0, railway_station: 0,
+    railway_halt: 0, helipad: 0, tram_stop: 0
+  };
+
+  // Parcourir les résultats et compter chaque type de station
+  features.forEach(feature => {
+    const fclass = feature.attributes.fclass || "vide"; // Utiliser "vide" si `fclass` est vide
+    if (counts.hasOwnProperty(fclass)) {
+      counts[fclass]++;
+    }
+  });
+
+  // Mettre à jour le graphique avec les nouvelles données
+  updateChart(pieChart, [
+    counts.vide,
+    counts.bus_stop,
+    counts.ferry_terminal,
+    counts.airport,
+    counts.bus_station,
+    counts.taxi,
+    counts.railway_station,
+    counts.railway_halt,
+    counts.helipad,
+    counts.tram_stop
+  ]);
+}
+
+    // Fonction pour récupérer la géométrie de la région sélectionnée
+    async function getRegionGeometry(regionNom) {
+      const query = new Query();
+      query.where = `NOM_REG = '${regionNom}'`;
+      query.returnGeometry = true;
+
+      const result = await regions.queryFeatures(query);
+      if (result.features.length > 0) {
         console.log("La géométrie de la région a été récupérée avec succès.");
         return result.features[0].geometry;
-    } else {
+      } else {
         throw new Error("Aucune région trouvée avec ce nom.");
+      }
     }
-    }
-async function getProvinceGeometry(provinceNom) {
-    const query = new Query();
-    query.where = `Nom = '${provinceNom}'`; 
-    query.returnGeometry = true;
-    const result = await provinces.queryFeatures(query);
-    if (result.features.length > 0) {
+    async function getProvinceGeometry(provinceNom) {
+      const query = new Query();
+      query.where = `Nom = '${provinceNom}'`;
+      query.returnGeometry = true;
+      const result = await provinces.queryFeatures(query);
+      if (result.features.length > 0) {
         console.log("La géométrie de la province a été récupérée avec succès.");
         return result.features[0].geometry;
-    } else {
+      } else {
         throw new Error("Aucune province trouvée avec ce nom.");
+      }
     }
-}
 
-// Fonction pour filtrer les stations dans la région
-async function filterStationsInRegion(regionGeometry) {
-    const query = new Query();
-    query.geometry = regionGeometry;
-    query.spatialRelationship = "intersects";  // Utilisez "intersects" pour inclure les stations proches des frontières
-    query.returnGeometry = false;
-    query.outFields = ["id"];  // Récupérer uniquement l'ID
+    // Fonction pour récupérer les provinces à l'intérieur d'une région
+    async function getProvinces(regionGeometry) {
+      const query = new Query();
+      query.geometry = regionGeometry;
+      query.spatialRelationship = "intersects";
+      query.returnGeometry = true; // Nous avons besoin de la géométrie pour calculer l'aire
+      query.outFields = ["Nom"];
 
-    const result = await stations_transport.queryFeatures(query);
-    const stationsIds = result.features.map(feature => feature.attributes.id).join(', ');
+      const result = await provinces.queryFeatures(query);
+      selectProvince.innerHTML = ""; // Effacer les anciennes options
 
-    stations_transport.definitionExpression = `id IN (${stationsIds})`;
-    stations_transport.renderer = selectedPointrenderer;
-  console.log("Stations filtrées :", stationsIds);
-   
-    }
-async function filterStationsInProvince(provinceGeometry) {
-    const query = new Query();
-    query.geometry = provinceGeometry;
-    query.spatialRelationship = "intersects";  // Utilisez "intersects" pour inclure les stations proches des frontières
-    query.returnGeometry = false;
-    query.outFields = ["id"];  // Récupérer uniquement l'ID
-
-    const result = await stations_transport.queryFeatures(query);
-    const stationsIds = result.features.map(feature => feature.attributes.id).join(', ');
-
-    stations_transport.definitionExpression = `id IN (${stationsIds})`;
-    stations_transport.renderer = selectedPointrenderer;
-    console.log("Stations filtrées :", stationsIds);
-   
-}
-
-// Fonction pour récupérer les provinces à l'intérieur d'une région
-async function getProvinces(regionGeometry) {
-    const query = new Query();
-    query.geometry = regionGeometry;
-    query.spatialRelationship = "intersects";
-    query.returnGeometry = true; // Nous avons besoin de la géométrie pour calculer l'aire
-    query.outFields = ["Nom"]; 
-
-    const result = await provinces.queryFeatures(query);
-    selectProvince.innerHTML = ""; // Effacer les anciennes options
-
-    if (result.features.length > 0) {
+      if (result.features.length > 0) {
         console.log("Provinces récupérées avec succès.");
 
         result.features.forEach(feature => {
-            const provinceGeometry = feature.geometry;
+          const provinceGeometry = feature.geometry;
 
-            // Calculer l'intersection entre la région et la province
-            const intersection = geometryEngine.intersect(regionGeometry, provinceGeometry);
-            
-            if (intersection) {
-                const intersectionArea = geometryEngine.geodesicArea(intersection, "square-kilometers");
-                const provinceArea = geometryEngine.geodesicArea(provinceGeometry, "square-kilometers");
+          // Calculer l'intersection entre la région et la province
+          const intersection = geometryEngine.intersect(regionGeometry, provinceGeometry);
 
-                // Vérifier si l'aire d'intersection est significative
-                if (intersectionArea / provinceArea > 0.) { // par exemple, plus de 50% de la province est dans la région
-                    const option = document.createElement("option");
-                    option.value = feature.attributes.Nom;
-                    option.text = feature.attributes.Nom;
-                    selectProvince.add(option);
-                }
+          if (intersection) {
+            const intersectionArea = geometryEngine.geodesicArea(intersection, "square-kilometers");
+            const provinceArea = geometryEngine.geodesicArea(provinceGeometry, "square-kilometers");
+
+            // Vérifier si l'aire d'intersection est significative
+            if (intersectionArea / provinceArea > 0.) { // par exemple, plus de 50% de la province est dans la région
+              const option = document.createElement("option");
+              option.value = feature.attributes.Nom;
+              option.text = feature.attributes.Nom;
+              selectProvince.add(option);
             }
+          }
         });
-    } else {
+      } else {
         console.log("Aucune province trouvée pour cette région.");
+      }
     }
-}
 
+    // Événement de changement sur le sélecteur de région
+    selectRegion.addEventListener("change", (event) => {
+      const selectedRegion = event.target.value;
+      handleRegionChange(selectedRegion);
+    });
+    selectProvince.addEventListener("change", (event) => {
+      const selectedProvince = event.target.value;
+      handleProvinceChange(selectedProvince);
+    });
 
-// Événement de changement sur le sélecteur de région
-selectRegion.addEventListener("change", (event) => {
-    const selectedRegion = event.target.value;
-    handleRegionChange(selectedRegion);
-});
-selectProvince.addEventListener("change", (event) => {
-    const selectedProvince = event.target.value;
-    handleProvinceChange(selectedProvince);
-});
+    async function handleTypeChange(selectedType) {
+      try {
+        
 
- let regionFilterExpression = ""; // Filtre basé sur la région géographique
-  let typeFilterExpression = "";   // Filtre basé sur le type sélectionné
+        // Créer une nouvelle expression de définition
+        let newDefinitionExpression = '';
 
-// selectType.addEventListener('change', function(event) {
-//   const selectedType = event.target.value;
+        // Vérifier s'il y a déjà une expression de définition
+        if (stations_transport.definitionExpression) {
+          // Extraire les filtres existants
+          const existingFilters = stations_transport.definitionExpression.split(' AND ');
 
-//   if (selectedType) {
-//     // Définir le filtre de type en fonction de la sélection
-//     typeFilterExpression = `fclass='${selectedType}'`;
-//   } else {
-//     // Effacer le filtre de type s'il n'y a pas de sélection
-//     typeFilterExpression = "";
-//   }
+          // Filtrer pour garder tous les filtres sauf celui par type
+          const filteredFilters = existingFilters.filter(filter => !filter.startsWith('fclass'));
 
-//   // Appliquer la définition combinée des filtres
-  
-// });
+          // Reconstituer l'expression avec les filtres restants
+          newDefinitionExpression = filteredFilters.join(' AND ');
+        }
 
-//   function applyCombinedFilter() {
-//   // Construire la définition combinée
-//   let combinedExpression = "";
+        // Ajouter le nouveau filtre par type
+        newDefinitionExpression += (newDefinitionExpression ? ' AND ' : '') + `fclass = '${selectedType}'`;
 
-//   if (regionFilterExpression && typeFilterExpression) {
-//     combinedExpression = `${regionFilterExpression} AND ${typeFilterExpression}`;
-//   } else if (regionFilterExpression) {
-//     combinedExpression = regionFilterExpression;
-//   } else if (typeFilterExpression) {
-//     combinedExpression = typeFilterExpression;
-//   }
+        // Mettre à jour l'expression de définition
+        stations_transport.definitionExpression = newDefinitionExpression;
 
-//   // Appliquer l'expression de filtre combinée à la couche
-//   stations_transport.definitionExpression = combinedExpression;
+        // Appliquer le rendu sur les stations filtrées par type
+        stations_transport.renderer = selectedTyperenderer;
+        
 
-//   // Si vous avez un rendu spécifique pour les points filtrés
-//   stations_transport.renderer = selectedPointrenderer;
+        console.log("Stations filtrées par type :", selectedType);
+        console.log("Nouvelle expression de définition :", stations_transport.definitionExpression);
 
-//   // Optionnel : zoom sur les points filtrés
-//   zoomToLayer(stations_transport);
-// }
- 
+        const query = stations_transport.createQuery();
+       query.where = newDefinitionExpression; // Utilise la nouvelle expression de définition
+       query.outFields = ["fclass"]; // Récupère les champs nécessaires pour le graphique
 
-    // supprimer tous les filtres
-  const InitDiv = document.getElementById("initialiser");
+        const result = await stations_transport.queryFeatures(query);
+        const filteredStationsCount = result.features.length;
+       
+       document.getElementById("count").textContent = filteredStationsCount;
+    // Mettre à jour la chart avec les données filtrées
+    updateChartWithFilteredData(result.features);
+
+      } catch (err) {
+        console.error("Erreur lors de l'application du filtre de type : ", err);
+      }
+    }
+    selectType.addEventListener("change", (event) => {
+      const selectedType = event.target.value;
+      handleTypeChange(selectedType);
+    });
+    //supprimer tous les filtres
+    const InitDiv = document.getElementById("initialiser");
     function Actualiser() {
+       stations_transport.renderer = Stationsrenderer
+      regions.renderer = RegionRenderer
+      provinces.renderer= ProvinceRenderer
       stations_transport.definitionExpression = null;
       regions.definitionExpression = null;
       provinces.definitionExpression = null;
@@ -608,253 +649,359 @@ selectProvince.addEventListener("change", (event) => {
       zoomToLayer(stations_transport)
     }
     InitDiv.addEventListener('click', function () {
-      Actualiser(); 
+      Actualiser();
     });
 
 
     // recherche par une geomertrie dessinée
-  const graphicsLayer = new GraphicsLayer({ title: "graphicsLayer" });
+    
 
-  const sketch = new Sketch({
-  view: view,
-  layer: graphicsLayer
-  });
-const sketchExpand = new Expand({
+    // Créer une instance de Sketch
+    const sketch = new Sketch({
+      view: view,
+      layer: graphicsLayer,
+      creationMode: "update"
+    });
+
+    // Ajouter un écouteur d'événement pour récupérer la géométrie de la forme
+    // Écouteur d'événement pour gérer la création et l'édition de formes
+    sketch.on("create", async (event) => {
+      if (event.state === "complete") {
+        console.log("Dessin complet !");
+        // Récupérer la géométrie de la forme dessinée
+        const polygonGeometry = event.graphic.geometry;
+        // Appliquer le filtre spatial sur la couche des stations de transport
+        await filterStations(polygonGeometry);
+      } else {
+        console.log("État du dessin :", event.state);
+      }
+    });
+
+    // Écouteur d'événement pour gérer la suppression de formes
+    sketch.on("delete", () => {
+      console.log("Forme supprimée, suppression du filtre...");
+      // Réinitialiser le filtre sur la couche des stations de transport
+      stations_transport.definitionExpression = null; // Supprimer le filtre
+      stations_transport.renderer = Stationsrenderer; // Optionnel : réinitialiser le rendu
+      console.log("Filtre réinitialisé.");
+    });
+
+    // Fonction pour filtrer les stations de transport
+    async function filterStations(polygon) {
+      console.log("Début du filtrage des stations...");
+
+      try {
+        // Créer une requête pour la couche des stations de transport
+        const query = stations_transport.createQuery();
+        query.geometry = polygon; // Définir la géométrie du filtre
+        query.spatialRelationship = "intersects"; // Définir la relation spatiale
+        query.returnGeometry = true; // Si vous souhaitez renvoyer la géométrie
+        query.outFields = ["id"]; // Récupérer uniquement l'ID
+
+        // Exécuter la requête pour obtenir les résultats
+        const result = await stations_transport.queryFeatures(query);
+
+        // Vérifiez si des résultats sont retournés
+        if (result.features.length > 0) {
+          // Récupérer les ID des stations et les joindre pour l'expression de définition
+          const stationsIds = result.features.map(feature => feature.attributes.id).join(', ');
+          console.log("Stations trouvées :", stationsIds);
+
+          // Appliquer l'expression de définition pour filtrer la couche
+          stations_transport.definitionExpression = `id IN (${stationsIds})`;
+          stations_transport.renderer = selectedPointrenderer; // Définir le rendu personnalisé
+        } else {
+          console.log("Aucune station trouvée dans la zone de dessin.");
+          stations_transport.definitionExpression = null; // Réinitialiser si aucun point n'est trouvé
+        }
+      } catch (error) {
+        console.error("Erreur lors de la requête de filtre :", error);
+      }
+    }
+
+
+    const sketchExpand = new Expand({
       view: view,
       content: sketch,
       expanded: false,
-      expandIcon:"pencil-mark"
-      
-    });
-    view.ui.add(sketchExpand, "top-left");
+      expandIcon: "pencil-mark",
+      expandTooltip: "Filtrer les stations de transport  par géometrie"
 
-  const editor = new Editor({
-  view: view,
-  });
-  const editorExpand = new Expand({
+    });
+    view.ui.add(sketchExpand, "top-right");
+
+    const editor = new Editor({
+      view: view,
+    });
+    const editorExpand = new Expand({
       view: view,
       content: editor,
       expanded: false,
-      
+      expandTooltip: "Editer les couches (points, lignes, polygones)"
+
     });
 
-    view.ui.add(editorExpand, "top-left");
+    view.ui.add(editorExpand, "top-right");
 
-  // afficher le sketch sur la carte une fois on presse le bouton avec id sketch
-  document.getElementById("sketch").addEventListener("click", function () {
-  sketchExpand.expanded= true;
-  });
+    // afficher le sketch sur la carte une fois on presse le bouton avec id sketch
+    document.getElementById("sketch").addEventListener("click", function () {
+      sketchExpand.expanded = true;
+    });
 
-  document.getElementById("editer").addEventListener("click", function () {
-  editorExpand.expanded=true
-  });
+    document.getElementById("editer").addEventListener("click", function () {
+      editorExpand.expanded = true
+    });
 
- 
+    // // rechercher par buffer
 
-// // rechercher par buffer
-// const sketchLayer = new GraphicsLayer();
-//         const bufferLayer = new GraphicsLayer();
-// view.map.addMany([bufferLayer, sketchLayer]);
-// let bufferSize = 0;
-// view.ui.add([queryDiv], "bottom-left");
+    const sketchLayer = new GraphicsLayer();
+    const bufferLayer = new GraphicsLayer();
+    view.map.addMany([bufferLayer, sketchLayer]);
 
-// let sketchGeometry = null;
-//         const sketchViewModel = new SketchViewModel({
-//           layer: sketchLayer,
-//           defaultUpdateOptions: {
-//             tool: "reshape",
-//             toggleToolOnClick: false
-//           },
-//           view: view,
-//           defaultCreateOptions: { hasZ: false }
-//         });
-
-//         sketchViewModel.on("create", (event) => {
-//           if (event.state === "complete") {
-//             sketchGeometry = event.graphic.geometry;
-//             runQuery();
-//           }
-//         });
-
-//         sketchViewModel.on("update", (event) => {
-//           if (event.state === "complete") {
-//             sketchGeometry = event.graphics[0].geometry;
-//             runQuery();
-//           }
-//         });
-//         // draw geometry buttons - use the selected geometry to sktech
-//         const pointBtn = document.getElementById("point-geometry-button");
-//         const lineBtn = document.getElementById("line-geometry-button");
-//         const polygonBtn = document.getElementById("polygon-geometry-button");
-//         pointBtn.addEventListener("click", geometryButtonsClickHandler);
-//         lineBtn.addEventListener("click", geometryButtonsClickHandler);
-//         polygonBtn.addEventListener("click", geometryButtonsClickHandler);
-//         function geometryButtonsClickHandler(event) {
-//           const geometryType = event.target.value;
-//           clearGeometry();
-//           sketchViewModel.create(geometryType);
-//         }
-
-//         const bufferNumSlider = new Slider({
-//           container: "bufferNum",
-//           min: 0,
-//           max: 500,
-//           steps: 1,
-//           visibleElements: {
-//             labels: true
-//           },
-//           precision: 0,
-//           labelFormatFunction: (value, type) => {
-//             return `${value.toString()}m`;
-//           },
-//           values: [0]
-//         });
-//         // get user entered values for buffer
-//         bufferNumSlider.on(["thumb-change", "thumb-drag"], bufferVariablesChanged);
-//         function bufferVariablesChanged(event) {
-//           bufferSize = event.value;
-//           runQuery();
-//         }
-//         // Clear the geometry and set the default renderer
-//         const clearGeometryBtn = document.getElementById("clearGeometry");
-//         clearGeometryBtn.addEventListener("click", clearGeometry);
-
-//         // Clear the geometry and set the default renderer
-//         function clearGeometry() {
-//           sketchGeometry = null;
-//           sketchViewModel.cancel();
-//           sketchLayer.removeAll();
-//           bufferLayer.removeAll();
-//           clearHighlighting(); 
-//         }
-
-//         // set the geometry query on the visible 
-//         const debouncedRunQuery = promiseUtils.debounce(() => {
-//           if (!sketchGeometry) {
-//             return;
-//           }
-
-//           resultDiv.style.display = "block";
-//           updateBufferGraphic(bufferSize);
-//         });
-
-//         function runQuery() {
-//           debouncedRunQuery().catch((error) => {
-//             if (error.name === "AbortError") {
-//               return;
-//             }
-
-//             console.error(error);
-//           });
-//         }
-
-//         // Set the renderer with objectIds
-//         let highlightHandle = null;
-//         function clearHighlighting() {
-//           if (highlightHandle) {
-//             highlightHandle.remove();
-//             highlightHandle = null;
-//           }
-//         }
-
-//         
-//         // update the graphic with buffer
-//         function updateBufferGraphic(buffer) {
-//           // add a polygon graphic for the buffer
-//           if (buffer > 0) {
-//             const bufferGeometry = geometryEngine.geodesicBuffer(sketchGeometry, buffer, "meters");
-//             if (bufferLayer.graphics.length === 0) {
-//               bufferLayer.add(
-//                 new Graphic({
-//                   geometry: bufferGeometry,
-//                   symbol: sketchViewModel.polygonSymbol
-//                 })
-//               );
-//             } else {
-//               bufferLayer.graphics.getItemAt(0).geometry = bufferGeometry;
-//             }
-//           } else {
-//             bufferLayer.removeAll();
-//           }
-//         }
-//  //// Dashbord
- // Create the PieChartMediaInfo media type
-
-const counts = {};
-stations_transport.queryFeatures().then((result) => {
-  result.features.forEach((feature) => {
-    const type = feature.attributes["fclass"]; // Remplace par le nom exact de ton attribut
-    counts[type] = (counts[type] || 0) + 1; // Compte le nombre de stations par type
-    
-  });
-
- 
-  // 2. Préparer les données pour le graphique
-  const types = Object.keys(counts);
-  const values = types.map(type => counts[type]);
-   if (values) {console.log(values)} else console.log("objet vide")
-
-  
-  // Palette de 10 couleurs
-  const colors = [
-    [220, 123, 4, 1],   // Couleur 1
-    [229, 80, 53, 1],   // Couleur 2
-    [54, 162, 235, 1],  // Couleur 3
-    [75, 192, 192, 1],  // Couleur 4
-    [255, 206, 86, 1],  // Couleur 5
-    [153, 102, 255, 1], // Couleur 6
-    [255, 99, 132, 1],  // Couleur 7
-    [255, 159, 64, 1],  // Couleur 8
-    [199, 199, 199, 1],  // Couleur 9
-    [0, 0, 0, 1]        // Couleur 10
-  ]; // Ajuste les couleurs selon le nombre de types
-
-  // 3. Créer le pieChartValue
-  let pieChartValue = new ChartMediaInfoValue({
-    colors :[
-    new Color([220, 123, 4, 1]),   // Couleur 1
-    new Color([229, 80, 53, 1]),   // Couleur 2
-    new Color([54, 162, 235, 1]),  // Couleur 3
-    new Color([75, 192, 192, 1]),  // Couleur 4
-    new Color([255, 206, 86, 1]),  // Couleur 5
-    new Color([153, 102, 255, 1]), // Couleur 6
-    new Color([255, 99, 132, 1]),  // Couleur 7
-    new Color([255, 159, 64, 1]),  // Couleur 8
-    new Color([199, 199, 199, 1]),  // Couleur 9
-    new Color([0, 0, 0, 1])        // Couleur 10
-   ],
-    fields: values.map((value, index) => `${types[index]}: ${value}`), // Formate les champs
-    normalizeField: null,
-  });
-  console.log(pieChartValue.fields)
-
-  // 4. Créer le PieChartMediaInfo
-  let pieChart = new PieChartMediaInfo({
-    title: "<b>Nombre de stations par type</b>",
-    caption: "Distribution par type de station",
-    value: pieChartValue
-  });
-
-  // 5. Créer le MediaContent
-  let mediaElement = new MediaContent({
-    mediaInfos: [pieChart]
-  });
-  const chartExpand = new Expand({
+    let sketchGeometry = null;
+    const sketchViewModel = new SketchViewModel({
+      layer: sketchLayer,
+      defaultUpdateOptions: {
+        tool: "reshape",
+        toggleToolOnClick: false
+      },
       view: view,
-    content: mediaElement,
-      expandIcon:"dashboard",
-    expanded: false,
+      defaultCreateOptions: { hasZ: false }
     });
-  view.ui.add(chartExpand, "top-right");
 
- document.getElementById("dashbord").addEventListener("click", function () {
-       chartExpand.expanded=true
-});
-});
+    sketchViewModel.on("create", (event) => {
+      if (event.state === "complete") {
+        sketchGeometry = event.graphic.geometry;
+        runQuery(); // Appel de la fonction runQuery pour dessiner le buffer et surligner les stations
+      }
+    });
 
- }
-};
+    sketchViewModel.on("update", (event) => {
+      if (event.state === "complete") {
+        sketchGeometry = event.graphics[0].geometry;
+        runQuery(); // Appel de la fonction runQuery pour mettre à jour le buffer et les stations
+      }
+    });
 
+    // Draw geometry buttons
+    const pointBtn = document.getElementById("point-geometry-button");
+    const lineBtn = document.getElementById("line-geometry-button");
+    const polygonBtn = document.getElementById("polygon-geometry-button");
+    pointBtn.addEventListener("click", geometryButtonsClickHandler);
+    lineBtn.addEventListener("click", geometryButtonsClickHandler);
+    polygonBtn.addEventListener("click", geometryButtonsClickHandler);
+
+    function geometryButtonsClickHandler(event) {
+      const geometryType = event.target.value;
+      clearGeometry();
+      sketchViewModel.create(geometryType);
+    }
+    let expandBuffer='' 
+
+    this.$nextTick(() => {
+      view.when(() => {
+        const queryDiv = document.getElementById("queryDiv");
+        if (queryDiv) {
+            expandBuffer = new Expand({
+            view: view,
+            content: queryDiv,
+            expandIcon: "rings",
+            expandTooltip: "Afficher les options de buffer"
+          });
+
+          view.ui.add(expandBuffer, "top-right");
+
+        } else {
+          console.error("queryDiv n'a pas été trouvé.");
+        }
+      });
+    });
+
+    let bufferSize = 0;
+    const bufferNum = document.getElementById("bufferNum");
+    const bufferNumSlider = new Slider({
+      container: bufferNum,
+      min: 0,
+      max: 5000,
+      steps: 1,
+      visibleElements: {
+        labels: true
+      },
+      precision: 0,
+      labelFormatFunction: (value) => {
+        return `${value.toString()}m`;
+      },
+      values: [0]
+    });
+    // get user entered values for buffer
+    bufferNumSlider.on(["thumb-change", "thumb-drag"], bufferVariablesChanged);
+    function bufferVariablesChanged(event) {
+      bufferSize = event.value;
+      runQuery();
+    }
+    const clearGeometryBtn = document.getElementById("clearGeometry");
+    clearGeometryBtn.addEventListener("click", clearGeometry);
+
+    function clearGeometry() {
+      sketchGeometry = null;
+      sketchViewModel.cancel();
+      sketchLayer.removeAll();
+      bufferLayer.removeAll();
+
+      clearSelectionStations()
+    }
+
+    function runQuery() {
+      // Efface le buffer précédent
+      bufferLayer.removeAll();
+
+      // Vérifie si une géométrie existe et si la taille du buffer est supérieure à zéro
+      if (sketchGeometry && bufferSize > 0) {
+        // Crée la géométrie du tampon en utilisant geometryEngine.geodesicBuffer
+        const bufferGeometry = geometryEngine.geodesicBuffer(sketchGeometry, bufferSize, "meters");
+
+        // Crée un graphique pour afficher la géométrie du tampon avec un symbole de polygone par défaut
+        const bufferGraphic = new Graphic({
+          geometry: bufferGeometry,
+          symbol: {
+            type: "simple-fill", // symbole de remplissage simple
+            color: [150, 150, 255, 0.4], // couleur avec transparence (bleu clair)
+            outline: {
+              color: [0, 0, 255], // contour bleu
+              width: 2
+            }
+          }
+        });
+
+        // Ajoute le graphique du tampon à la couche bufferLayer
+        bufferLayer.add(bufferGraphic);
+
+        //surligner les stations qui se trouvent dans le tampon
+        FilterStationsInGeometry(bufferGeometry); // Appel à la fonction pour surligner les stations
+
+      }
+    }
+  document.getElementById("buffer").addEventListener("click", function() { expandBuffer.expanded=true})
+
+    // Dashboard
+    let expanddash=''
+    this.$nextTick(() => {
+      view.when(() => {
+    const resultDiv = document.getElementById("resultDiv");
+    if (resultDiv) {
+          expanddash = new Expand({
+            view: view,
+            content: resultDiv,
+            expandIcon: "dashboard",
+            expandTooltip: "dashboard"
+          });
+
+          view.ui.add(expanddash, "top-right");
+
+        } else {
+          console.error("result n'a pas été trouvé.");
+        }
+    
+         });
+    });
+     Chart.register(DoughnutController, ArcElement, Tooltip, Legend, Title);
+   
+    const canvasElement = document.getElementById('material-chart');
+
+
+    // Création du graphique à secteurs
+    const ctx = canvasElement.getContext('2d');
+    const pieChart = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: ['vide', 'bus_stop', 'ferry_terminal', 'airport', 'bus_station', 'taxi', 'railway_station', 'railway_halt', 'helipad', 'tram_stop'],
+        datasets: [{
+          data: [],  // Données initiales, mises à jour dans queryStatistics
+          backgroundColor: [
+           '#E74C3C', '#3498DB', '#2ECC71', '#F1C40F', '#9B59B6', '#E67E22', '#1ABC9C', '#34495E', '#D35400', '#7F8C8D'
+          ]
+        }]
+      },
+      options: {
+    responsive: false,
+    cutout: '35%',  
+    plugins: {
+      legend: {
+        position: 'bottom',
+        labels: {
+          font: {
+            size: 14  
+          }
+        }
+      },
+      title: {
+        display: true,
+        text: "Nombre de stations par type",
+        font: {
+          size: 16  
+        }
+      }
+    }
+  }
+    });
+
+    async function initializeChartWithAllStations() {
+  await queryStatistics(); // Remplit la chart avec les valeurs par défaut
+}
+    
+    async function queryStatistics() {
+      const statDefinitions = [
+        { onStatisticField: "CASE WHEN fclass = '' THEN 1 ELSE 0 END", outStatisticFieldName: "type_1_count", statisticType: "sum" },
+        { onStatisticField: "CASE WHEN fclass = 'bus_stop' THEN 1 ELSE 0 END", outStatisticFieldName: "type_2_count", statisticType: "sum" },
+        { onStatisticField: "CASE WHEN fclass = 'ferry_terminal' THEN 1 ELSE 0 END", outStatisticFieldName: "type_3_count", statisticType: "sum" },
+        { onStatisticField: "CASE WHEN fclass = 'airport' THEN 1 ELSE 0 END", outStatisticFieldName: "type_4_count", statisticType: "sum" },
+        { onStatisticField: "CASE WHEN fclass = 'bus_station' THEN 1 ELSE 0 END", outStatisticFieldName: "type_5_count", statisticType: "sum" },
+        { onStatisticField: "CASE WHEN fclass = 'taxi' THEN 1 ELSE 0 END", outStatisticFieldName: "type_6_count", statisticType: "sum" },
+        { onStatisticField: "CASE WHEN fclass = 'railway_station' THEN 1 ELSE 0 END", outStatisticFieldName: "type_7_count", statisticType: "sum" },
+        { onStatisticField: "CASE WHEN fclass = 'railway_halt' THEN 1 ELSE 0 END", outStatisticFieldName: "type_8_count", statisticType: "sum" },
+        { onStatisticField: "CASE WHEN fclass = 'helipad' THEN 1 ELSE 0 END", outStatisticFieldName: "type_9_count", statisticType: "sum" },
+        { onStatisticField: "CASE WHEN fclass = 'tram_stop' THEN 1 ELSE 0 END", outStatisticFieldName: "type_10_count", statisticType: "sum" }
+     
+      ];
+
+      const query = {
+        where: "1=1", 
+        outStatistics: statDefinitions
+      };
+
+      try {
+        const result=await stations_transport.queryFeatures(query);
+        const allStats=result.features[0].attributes;
+        updateChart(pieChart, [
+          allStats.type_1_count,
+          allStats.type_2_count,
+          allStats.type_3_count,
+          allStats.type_4_count,
+          allStats.type_5_count,
+          allStats.type_6_count,
+          allStats.type_7_count,
+          allStats.type_8_count,
+          allStats.type_9_count,
+          allStats.type_10_count
+        ]);
+      } catch(data) {
+        return console.error(data);
+      }
+    }
+
+    function updateChart(chart, dataValues) {
+      chart.data.datasets[0].data = dataValues;
+      chart.update();
+    }
+    
+    queryStatistics();
+    document.getElementById("dashbord").addEventListener("click", function () {
+      expanddash.expanded = true;
+    });
+    
+      }
+      }
+    
 </script> 
 <style>
 #viewDiv { 
@@ -868,6 +1015,4 @@ stations_transport.queryFeatures().then((result) => {
   box-sizing: border-box;
   
 }
-
-
 </style>

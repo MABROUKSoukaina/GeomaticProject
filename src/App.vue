@@ -3,15 +3,18 @@
   <div>
   <controlComponent/>
   <carteComponent/>
+  <bufferComponent/>
   </div>
 </template>
 
 <script>
 import carteComponent from './components/carteComponent.vue';
 import controlComponent from './components/controlComponent.vue';
+import bufferComponent from './components/bufferComponent.vue';
+import dashComponent from './components/dashComponent.vue';
 export default {
   components: {
-    carteComponent, controlComponent
+    carteComponent, controlComponent, bufferComponent, dashComponent
 
   }
 };

@@ -13,7 +13,7 @@
 </select><br>
 <select id="stationtype" class="form-select" aria-label="Default select example"> 
   <option value="" disabled selected>type</option>
-  <option value="" disabled selected>vide</option>
+  <option value="">vide</option>
 
 </select><br>
  <label for="">Rechercher les stations par:</label>

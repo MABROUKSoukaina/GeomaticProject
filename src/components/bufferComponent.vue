@@ -23,13 +23,28 @@
         ></button>
       </div>
       <br />
-      <div class="tooltip">
-        <label for="bufferNum">Entrer une valeur de buffer:</label>
+      <div>
+        Entrer une valeur de buffer:
         <div id="bufferNum"></div>
       </div>
       <br />
-      <button class="esri-button" id="clearGeometry" type="button">supprimer</button>
+      <button class="esri-button" id="clearGeometry" type="button" style="padding-right: 10px;">supprimer</button>
     </div>
+
+    <div id="resultDiv" class="esri-widget">
+  <div class="count">
+    Stations sélectionnées:
+    <div class="count" id="count">0</div>
+  </div>
+  <div class="charts">
+    <div>
+     <canvas id="material-chart" width="360" height="360"></canvas>
+    </div>
+     <!-- <div>
+      <canvas id="year-chart" height="350" width="260"></canvas>
+    </div> -->
+  </div>
+</div>
 
 </template>
 <script>
@@ -46,11 +61,22 @@
       }
 
       #queryDiv
+      
       {
-        min-width: 250px;
+        width: 250px;
         font-size: 14px;
         padding: 10px;
-        display: none;
+        display: block;
+        overflow-y: auto;
+        overflow-x: hidden;
+      }
+
+      #resultDiv
+      {
+        width: 350px;
+        font-size: 14px;
+        padding: 10px;
+        display: block;
         overflow-y: auto;
         overflow-x: hidden;
       }
@@ -73,5 +99,16 @@
       #bufferNum {
         width: 90%;
         margin: 2.5em auto 0;
+        background: #000;
+        padding-right: 10px;
+      }
+      .clearGeometry{
+        padding-right: 10px;
+      }
+      .count {
+        white-space: nowrap;
+        font-size: 14px;
+        font-weight: bold;
+        display: inline-block;
       }
 </style>
